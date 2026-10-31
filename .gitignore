@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+data/search-profile/
+*.log
+*.out
+.DS_Store
+Thumbs.db

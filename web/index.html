@@ -1,0 +1,250 @@
+<title>SiteHunt</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: одна колонка — вкладки по итогу звонка, строки компаний (балл, название, проблемы, телефон, статус); карточка компании открывается поверх списка. */
+:root {
+  --bg: #f3f4f1; --panel: #ffffff; --ink: #18202a; --muted: #5d6874; --line: #dfe3e0;
+  --accent: #1e5a7a; --accent-ink: #ffffff; --soft: #e8eef0; --shade: rgb(16 24 32 / .45);
+  --hot: #c2410c; --hot-soft: #fbe9df; --warm: #b7791f; --warm-soft: #f7efdc; --cool: #4b6b5d; --cool-soft: #e5eee9;
+  --good: #1f7a4d; --good-soft: #e1f2e8; --bad: #9b2c2c; --bad-soft: #f6e3e3;
+  --f-display: "Unbounded", "Onest", system-ui, sans-serif; --f-body: "Onest", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-data: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12171c; --panel: #1a2128; --ink: #e6ebef; --muted: #98a4ae; --line: #2a333c;
+  --accent: #6fb3d6; --accent-ink: #0f1a22; --soft: #222c35; --shade: rgb(0 0 0 / .6);
+  --hot: #f08a5d; --hot-soft: #3a2219; --warm: #e2b45c; --warm-soft: #33291a; --cool: #8fbfa8; --cool-soft: #1d2b25;
+  --good: #6fcf97; --good-soft: #17301f; --bad: #f0a0a0; --bad-soft: #3a1f1f; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12171c; --panel: #1a2128; --ink: #e6ebef; --muted: #98a4ae; --line: #2a333c;
+  --accent: #6fb3d6; --accent-ink: #0f1a22; --soft: #222c35; --shade: rgb(0 0 0 / .6);
+  --hot: #f08a5d; --hot-soft: #3a2219; --warm: #e2b45c; --warm-soft: #33291a; --cool: #8fbfa8; --cool-soft: #1d2b25;
+  --good: #6fcf97; --good-soft: #17301f; --bad: #f0a0a0; --bad-soft: #3a1f1f; color-scheme: dark }
+* { box-sizing: border-box }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 15px/1.5 var(--f-body) }
+button, input, select, textarea { font: inherit; color: inherit }
+button { cursor: pointer }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+.wrap { max-width: 1080px; margin: 0 auto; padding-block: 22px 60px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap }
+.brand { font: 700 24px/1 var(--f-display); letter-spacing: -.01em; margin: 0 }
+.brand b { color: var(--hot); font-weight: 700 }
+.sub { color: var(--muted); font-size: 13.5px; margin: 6px 0 0 }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 20px; border-bottom: 1px solid var(--line) }
+.tab { border: 0; background: none; padding: 9px 12px; color: var(--muted); font-weight: 600; border-bottom: 2px solid transparent; margin-bottom: -1px }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent) }
+.tab .n { font: 600 12px var(--f-data); margin-left: 5px; color: var(--muted) }
+.tools { display: flex; gap: 8px; margin: 14px 0; flex-wrap: wrap }
+.tools input, .tools select { border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 8px 11px }
+.tools input { flex: 1; min-width: 200px }
+.rows { display: grid; gap: 8px }
+.row { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 14px; align-items: center; background: var(--panel);
+  border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; text-align: left; width: 100% }
+.row:hover { border-color: var(--muted) }
+.score { width: 52px; height: 52px; border-radius: 12px; display: grid; place-items: center; line-height: 1;
+  background: var(--cool-soft); color: var(--cool) }
+.score b { font: 600 19px var(--f-data) } .score small { font-size: 10px; display: block; margin-top: 2px }
+.score.warm { background: var(--warm-soft); color: var(--warm) } .score.hot { background: var(--hot-soft); color: var(--hot) }
+.nm { font-weight: 600; font-size: 16px }
+.site { font: 500 12.5px var(--f-data); color: var(--muted); margin-left: 6px }
+.probs { color: var(--muted); font-size: 13.5px; margin-top: 2px }
+.right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px }
+.phone-n { font: 600 14px var(--f-data); white-space: nowrap }
+.pill { font-size: 12px; font-weight: 600; border-radius: 999px; padding: 2px 9px; background: var(--soft); color: var(--muted); white-space: nowrap }
+.pill.s-int { background: var(--good-soft); color: var(--good) } .pill.s-client { background: var(--good); color: var(--panel) }
+.pill.s-no { background: var(--bad-soft); color: var(--bad) } .pill.s-later, .pill.s-noans { background: var(--warm-soft); color: var(--warm) }
+.empty { padding: 40px 18px; color: var(--muted); text-align: center; background: var(--panel); border: 1px dashed var(--line); border-radius: 12px }
+.legend { font-size: 12.5px; color: var(--muted); margin-top: 14px }
+
+/* карточка компании */
+.shade { position: fixed; inset: 0; background: var(--shade); z-index: 10; display: grid; place-items: start center; overflow: auto;
+  padding: calc(24px + env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px)) }
+.card { width: min(980px, 100%); background: var(--bg); border-radius: 18px; padding: 22px; display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 26px; position: relative }
+.close { position: absolute; top: 12px; right: 12px; border: 1px solid var(--line); background: var(--panel); border-radius: 999px; width: 36px; height: 36px; font-size: 18px; line-height: 1 }
+.phone { width: 100%; aspect-ratio: 390 / 844; border-radius: 28px; border: 8px solid var(--ink); background: var(--soft); overflow: hidden }
+.phone img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block }
+.phone .ph-empty { height: 100%; display: grid; place-items: center; color: var(--muted); font-size: 13px; padding: 20px; text-align: center }
+.cap { font-size: 12px; color: var(--muted); margin-top: 8px; text-align: center }
+.card h1 { font: 700 22px/1.2 var(--f-display); margin: 0 40px 0 0; text-wrap: balance; letter-spacing: -.01em }
+.lnk { font: 500 13px var(--f-data); color: var(--accent); word-break: break-all }
+.sec { margin-top: 20px }
+.sec h2 { font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 8px; font-weight: 600 }
+.reasons { margin: 0; padding-left: 20px; display: grid; gap: 4px }
+.crow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin-bottom: 6px }
+.crow .k { font-size: 12px; color: var(--muted); width: 70px }
+.crow .v { font: 600 15px var(--f-data); user-select: all; flex: 1; min-width: 0; word-break: break-all }
+.crow a.v { color: var(--accent); text-decoration: none; user-select: auto; font-weight: 500; font-size: 13.5px }
+.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 600 }
+.btn:hover { border-color: var(--muted) }
+.btn.pri { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); padding: 8px 18px; font-size: 14px }
+.script { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; white-space: pre-wrap; font-size: 14.5px }
+.status { display: flex; flex-wrap: wrap; gap: 6px }
+.chip { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 6px 13px; font-size: 13.5px }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink) }
+.note { width: 100%; min-height: 76px; border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 10px 12px; resize: vertical; margin-top: 8px }
+.saverow { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 8px }
+.saverow input[type="date"] { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 6px 9px }
+.hint { font-size: 12.5px; color: var(--muted) }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--panel);
+  padding: 9px 16px; border-radius: 999px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 30 }
+.toast.on { opacity: 1 }
+@media (max-width: 720px) {
+  .row { grid-template-columns: 46px minmax(0, 1fr); }
+  .score { width: 46px; height: 46px }
+  .right { grid-column: 2; flex-direction: row; align-items: center; flex-wrap: wrap }
+  .site { display: block; margin: 0 }
+  .card { grid-template-columns: 1fr; padding: 18px }
+  .card .shot { max-width: 220px; margin: 0 auto; width: 100% }
+}
+@media (prefers-reduced-motion: reduce) { .toast { transition: none } }
+</style>
+
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1 class="brand">Site<b>Hunt</b></h1>
+      <p class="sub" id="upd">Загружаю базу…</p>
+    </div>
+  </div>
+  <div class="tabs" id="tabs" role="tablist" aria-label="Итог звонка"></div>
+  <div class="tools">
+    <input id="q" type="search" placeholder="Поиск: название, сайт или телефон" aria-label="Поиск">
+    <select id="niche" aria-label="Ниша"></select>
+  </div>
+  <div class="rows" id="rows"></div>
+  <p class="legend">Балл — насколько устарел сайт, из 100. Чем больше, тем нужнее компании новый сайт. Список отсортирован по баллу.</p>
+</div>
+<div id="modal"></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const ST = [["new", "Не звонили"], ["noans", "Не дозвонился"], ["later", "Перезвонить"], ["int", "Интерес"], ["client", "Клиент"], ["no", "Отказ"]];
+const STN = Object.fromEntries(ST);
+const S = { sites: [], calls: new Map(), tab: "new", niche: "all", q: "", cur: null, db: null, draft: null };
+const $ = id => document.getElementById(id);
+const el = (tag, attrs = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === "text") e.textContent = v; else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (k === "class") e.className = v; else e.setAttribute(k, v === true ? "" : v);
+  }
+  for (const k of kids.flat()) if (k != null && k !== false) e.append(k);
+  return e;
+};
+const key = id => id.replace(/[^A-Za-z0-9_.\-~:@+]/g, "_");
+const callOf = id => S.calls.get(key(id)) || {};
+const stOf = id => callOf(id).status || "new";
+const fmtPh = p => p.replace(/^\+7(\d{3})(\d{3})(\d{2})(\d{2})$/, "+7 $1 $2-$3-$4");
+const tone = sc => sc >= 40 ? "hot" : sc >= 20 ? "warm" : "";
+const short = t => t.split(" — ")[0];
+let tt; const toast = t => { const x = $("toast"); x.textContent = t; x.classList.add("on"); clearTimeout(tt); tt = setTimeout(() => x.classList.remove("on"), 2200); };
+async function copy(text, what) {
+  try { await navigator.clipboard.writeText(text); toast(what + " скопирован"); }
+  catch { toast("Не скопировалось — выделите и скопируйте вручную"); }
+}
+
+const inNiche = s => S.niche === "all" || s.ni === S.niche;
+function renderTabs() {
+  const base = S.sites.filter(inNiche);
+  $("tabs").replaceChildren(...[...ST, ["all", "Все"]].map(([k, n]) =>
+    el("button", { class: "tab", role: "tab", "aria-selected": String(S.tab === k), onclick: () => { S.tab = k; render(); } },
+      n, el("span", { class: "n", text: k === "all" ? base.length : base.filter(s => stOf(s.id) === k).length }))));
+}
+function renderRows() {
+  const q = S.q.trim().toLowerCase();
+  const v = S.sites.filter(s => inNiche(s) && (S.tab === "all" || stOf(s.id) === S.tab)
+    && (!q || (s.n + " " + s.id + " " + s.ph.join(" ")).toLowerCase().includes(q)));
+  $("rows").replaceChildren(...(v.length ? v.map(s => {
+    const st = stOf(s.id), c = callOf(s.id);
+    return el("button", { class: "row", onclick: () => open(s.id) },
+      el("span", { class: "score " + tone(s.sc), title: "Насколько устарел сайт, из 100" }, el("b", { text: s.sc }), el("small", { text: "из 100" })),
+      el("span", { style: "min-width:0" },
+        el("span", { class: "nm", text: s.n }), el("span", { class: "site", text: s.id }),
+        el("div", { class: "probs", text: s.r.slice(0, 3).map(r => short(r[0])).join(" · ") })),
+      el("span", { class: "right" },
+        el("span", { class: "phone-n", text: s.ph[0] ? fmtPh(s.ph[0]) : "нет телефона" }),
+        el("span", { style: "display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end" },
+          el("span", { class: "pill", text: s.ni }), st !== "new" ? el("span", { class: "pill s-" + st, text: STN[st] }) : null,
+          c.next ? el("span", { class: "pill", text: "позвонить " + new Date(c.next).toLocaleDateString("ru-RU", { day: "numeric", month: "short" }) }) : null)));
+  }) : [el("div", { class: "empty", text: !S.sites.length ? "База пока пустая — сайты появятся, когда закончится проверка."
+      : S.tab === "new" ? "Всем из этого списка уже позвонили. Посмотрите вкладку «Перезвонить»." : "Здесь пока никого нет." })]));
+}
+
+function pitch(s) {
+  const city = s.c === "Красноярск" ? "Красноярске" : s.c;
+  return `Здравствуйте! Меня зовут Родион, я делаю сайты для ${s.ni === "Стоматология" ? "клиник" : "автосервисов"} в ${city}.\n` +
+    `Посмотрел ваш сайт ${s.id} с телефона и заметил:\n${s.r.slice(0, 3).map(r => "— " + short(r[0])).join("\n")}\n` +
+    `Из-за этого часть клиентов уходит к тем, у кого сайт удобнее. Могу бесплатно показать, как он может выглядеть — удобно, если пришлю пример на почту или в WhatsApp?`;
+}
+
+function renderCard() {
+  const s = S.sites.find(x => x.id === S.cur);
+  if (!s) { $("modal").replaceChildren(); document.body.style.overflow = ""; return; }
+  document.body.style.overflow = "hidden";
+  const c = callOf(s.id);
+  if (!S.draft || S.draft.id !== s.id) S.draft = { id: s.id, status: c.status || "new", note: c.note || "", next: c.next || "" };
+  const d = S.draft;
+  const soc = { "wa.me": "WhatsApp", "t.me": "Telegram", "vk.com": "VK", "instagram.com": "Instagram", "ok.ru": "OK", "youtube.com": "YouTube", "dzen.ru": "Дзен" };
+  const contacts = [
+    ...s.ph.map(p => el("div", { class: "crow" }, el("span", { class: "k", text: "Телефон" }), el("span", { class: "v", text: fmtPh(p) }), el("button", { class: "btn", onclick: () => copy(p, "Номер") }, "Копировать"))),
+    ...s.em.map(m => el("div", { class: "crow" }, el("span", { class: "k", text: "E-mail" }), el("span", { class: "v", text: m }), el("button", { class: "btn", onclick: () => copy(m, "Адрес") }, "Копировать"))),
+    ...Object.entries(s.so).map(([h, u]) => el("div", { class: "crow" }, el("span", { class: "k", text: soc[h] || h }), el("a", { class: "v", href: u, target: "_blank", rel: "noopener", text: u.replace(/^https?:\/\//, "") }))),
+    s.ad ? el("div", { class: "crow" }, el("span", { class: "k", text: "Адрес" }), el("span", { class: "v", style: "font-family:var(--f-body);font-weight:500", text: s.ad })) : null,
+  ].filter(Boolean);
+  const close = () => { S.cur = null; S.draft = null; renderCard(); };
+  $("modal").replaceChildren(el("div", { class: "shade", onclick: e => { if (e.target === e.currentTarget) close(); } },
+    el("div", { class: "card", role: "dialog", "aria-modal": "true", "aria-label": s.n },
+      el("button", { class: "close", "aria-label": "Закрыть", onclick: close }, "×"),
+      el("div", { class: "shot" },
+        el("div", { class: "phone" }, s.shot ? el("img", { src: "shots/" + s.shot, alt: "Главная " + s.id + " на телефоне" }) : el("div", { class: "ph-empty", text: "Скриншота нет" })),
+        el("div", { class: "cap", text: "Так сайт выглядит на телефоне" })),
+      el("div", { style: "min-width:0" },
+        el("h1", { text: s.n }), el("a", { class: "lnk", href: s.u, target: "_blank", rel: "noopener", text: s.u }),
+        el("section", { class: "sec" }, el("h2", { text: `Что не так с сайтом · ${s.sc} из 100` }), el("ul", { class: "reasons" }, s.r.map(([t]) => el("li", { text: t })))),
+        el("section", { class: "sec" }, el("h2", { text: "Контакты" }), contacts.length ? contacts : el("p", { class: "hint", text: "На сайте контактов не нашлось — откройте сайт и посмотрите вручную." })),
+        el("section", { class: "sec" }, el("h2", { text: "Что сказать" }), el("div", { class: "script", text: pitch(s) }),
+          el("div", { class: "saverow" }, el("button", { class: "btn", onclick: () => copy(pitch(s), "Текст") }, "Скопировать текст для WhatsApp"))),
+        el("section", { class: "sec" }, el("h2", { text: "Итог звонка" }),
+          el("div", { class: "status", role: "group", "aria-label": "Итог звонка" }, ST.map(([k, n]) => el("button", { class: "chip", "aria-pressed": String(d.status === k), onclick: () => { d.status = k; renderCard(); } }, n))),
+          el("textarea", { class: "note", id: "note", placeholder: "Кто ответил, что сказали", oninput: e => { d.note = e.target.value; } }, d.note),
+          el("div", { class: "saverow" },
+            el("label", { class: "hint", for: "next" }, "Перезвонить"), el("input", { type: "date", id: "next", value: d.next, onchange: e => { d.next = e.target.value; } }),
+            el("button", { class: "btn pri", onclick: save }, "Сохранить"),
+            !S.db ? el("span", { class: "hint", text: "Сохранение работает только на странице в Claude" }) : c.at ? el("span", { class: "hint", text: "сохранено " + new Date(c.at).toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) }) : null))))));
+}
+
+async function save() {
+  const d = S.draft; if (!d || !S.db) { toast("Сохранение недоступно в этом окне"); return; }
+  try {
+    await S.db.doc("calls/" + key(d.id)).set({ status: d.status, note: d.note.trim(), next: d.next || null, at: new Date().toISOString() });
+    toast("Сохранено"); S.cur = null; S.draft = null; renderCard(); render();
+  } catch (e) { toast("Не сохранилось: " + (e.message || e.code)); }
+}
+
+function open(id) { S.cur = id; S.draft = null; renderCard(); }
+function render() { renderTabs(); renderRows(); }
+document.addEventListener("keydown", e => { if (e.key === "Escape" && S.cur) { S.cur = null; S.draft = null; renderCard(); } });
+$("q").addEventListener("input", e => { S.q = e.target.value; renderRows(); });
+$("niche").addEventListener("change", e => { S.niche = e.target.value; render(); });
+
+(async () => {
+  try {
+    const m = await (await fetch("data.json", { cache: "no-store" })).json();
+    S.sites = m.sites;
+    $("upd").textContent = `Компании с устаревшими сайтами · обновлено ${m.updated}`;
+    $("niche").replaceChildren(el("option", { value: "all", text: "Все ниши" }), ...[...new Set(S.sites.map(s => s.ni))].map(n => el("option", { value: n, text: n })));
+  } catch { $("upd").textContent = "Не удалось загрузить базу. Обновите страницу."; }
+  render();
+  const db = await window.claude?.use?.("db").catch(() => null);
+  if (!db) return;
+  S.db = db;
+  db.collection("calls").limit(1000).onSnapshot(snap => {
+    for (const ch of snap.docChanges()) if (ch.type === "removed") S.calls.delete(ch.doc.id); else S.calls.set(ch.doc.id, ch.doc.data());
+    render();
+  }, () => toast("Итоги звонков сейчас недоступны"));
+})();
+</script>
